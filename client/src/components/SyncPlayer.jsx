@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRoomStore } from '../store/useRoomStore';
 import YouTube from 'react-youtube';
-import { Link2, HardDrive } from 'lucide-react';
+import { Link2, HardDrive, MonitorPlay } from 'lucide-react';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const SyncPlayer = () => {
   const { socket, roomId } = useRoomStore();
-  const [videoUrl, setVideoUrl] = useState('https://www.youtube.com/watch?v=aqz-KE-bpKQ');
+  const [videoUrl, setVideoUrl] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [playing, setPlaying] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -29,6 +29,7 @@ const SyncPlayer = () => {
   };
 
   const getCurrentTime = () => {
+    if (!videoUrl) return 0;
     if (videoUrl.startsWith('blob:')) {
       return nativePlayerRef.current?.currentTime || 0;
     }
@@ -36,6 +37,7 @@ const SyncPlayer = () => {
   };
 
   const seekTo = (time) => {
+    if (!videoUrl) return;
     if (videoUrl.startsWith('blob:')) {
       if (nativePlayerRef.current) nativePlayerRef.current.currentTime = time;
     } else {
@@ -194,7 +196,19 @@ const SyncPlayer = () => {
         if (!isInputFocusedRef.current) setShowControls(false);
       }}
     >
-      {videoUrl.startsWith('blob:') ? (
+      {!videoUrl ? (
+        <div className="fade-in" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', gap: '20px' }}>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '28px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.05)' }}>
+             <MonitorPlay size={48} color="rgba(255,255,255,0.2)" />
+          </div>
+          <div style={{ textAlign: 'center', padding: '0 20px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: 'rgba(255,255,255,0.6)' }}>Waiting for a movie...</h2>
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.4)', margin: 0, maxWidth: '320px', lineHeight: '1.5' }}>
+              Paste a YouTube link above or upload a local video file to begin perfectly synced playback.
+            </p>
+          </div>
+        </div>
+      ) : videoUrl.startsWith('blob:') ? (
         <video
           ref={nativePlayerRef}
           src={videoUrl}
