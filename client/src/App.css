@@ -1,0 +1,6 @@
+/* App specific styles, relying mostly on global index.css */
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
