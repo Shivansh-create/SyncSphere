@@ -73,6 +73,8 @@ export const useWebRTC = () => {
     // When a new user signals they are fully mounted and ready to receive offers
     const handleUserWebrtcReady = async (data) => {
       const { userId } = data;
+      if (peersRef.current[userId]) return; // Prevent React 18 StrictMode double-firing
+      
       const stream = streamRef.current || await initLocalMedia();
       
       const peer = createPeer(userId, stream);
@@ -92,6 +94,8 @@ export const useWebRTC = () => {
     // Handle incoming offer
     const handleOffer = async (data) => {
       const { sdp, senderId } = data;
+      if (peersRef.current[senderId] && peersRef.current[senderId].remoteDescription) return; // Prevent duplicate offers from breaking state
+
       const stream = streamRef.current || await initLocalMedia();
 
       const peer = createPeer(senderId, stream);
@@ -179,9 +183,11 @@ export const useWebRTC = () => {
   }, [socket, roomId, localStream]);
 
   // Signal to existing users that we are ready to receive offers
+  const webrtcReadySent = useRef(false);
   useEffect(() => {
-    if (socket && roomId) {
+    if (socket && roomId && !webrtcReadySent.current) {
       socket.emit('webrtc_ready', { roomId });
+      webrtcReadySent.current = true;
     }
   }, [socket, roomId]);
 
