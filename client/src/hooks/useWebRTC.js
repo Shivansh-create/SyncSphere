@@ -60,7 +60,7 @@ export const useWebRTC = () => {
     };
 
     // When a new user joins, we (the existing user) create an offer and send it to them.
-    socket.on('user_joined', async (data) => {
+    const handleUserJoined = async (data) => {
       const { userId } = data;
       const stream = localStream || await initLocalMedia();
       
@@ -75,10 +75,11 @@ export const useWebRTC = () => {
         sdp: offer,
         targetId: userId,
       });
-    });
+    };
+    socket.on('user_joined', handleUserJoined);
 
     // Handle incoming offer
-    socket.on('offer', async (data) => {
+    const handleOffer = async (data) => {
       const { sdp, senderId } = data;
       const stream = localStream || await initLocalMedia();
 
@@ -94,33 +95,50 @@ export const useWebRTC = () => {
         sdp: answer,
         targetId: senderId,
       });
-    });
+    };
+    socket.on('offer', handleOffer);
 
     // Handle incoming answer
-    socket.on('answer', async (data) => {
+    const handleAnswer = async (data) => {
       const { sdp, senderId } = data;
       const peer = peersRef.current[senderId];
       if (peer) {
         await peer.setRemoteDescription(new RTCSessionDescription(sdp));
       }
-    });
+    };
+    socket.on('answer', handleAnswer);
 
     // Handle incoming ICE candidate
-    socket.on('ice_candidate', async (data) => {
+    const handleIceCandidate = async (data) => {
       const { candidate, senderId } = data;
       const peer = peersRef.current[senderId];
       if (peer) {
         await peer.addIceCandidate(new RTCIceCandidate(candidate));
       }
-    });
+    };
+    socket.on('ice_candidate', handleIceCandidate);
+
+    // Handle user leaving (to remove ghost streams)
+    const handleUserLeft = (userId) => {
+      if (peersRef.current[userId]) {
+        peersRef.current[userId].close();
+        delete peersRef.current[userId];
+      }
+      setRemoteStreams((prev) => {
+        const updated = { ...prev };
+        delete updated[userId];
+        return updated;
+      });
+    };
+    socket.on('user_left', handleUserLeft);
 
     // Cleanup
     return () => {
-      socket.off('user_joined');
-      socket.off('offer');
-      socket.off('answer');
-      socket.off('ice_candidate');
-      // localStream?.getTracks().forEach(track => track.stop());
+      socket.off('user_joined', handleUserJoined);
+      socket.off('offer', handleOffer);
+      socket.off('answer', handleAnswer);
+      socket.off('ice_candidate', handleIceCandidate);
+      socket.off('user_left', handleUserLeft);
     };
   }, [socket, roomId, localStream]);
 
