@@ -8,6 +8,9 @@ const VideoFeed = ({ stream, isLocal = false, muted = false, name = "User", onPi
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(err => {
+        console.warn("Autoplay blocked by browser:", err);
+      });
     }
   }, [stream]);
 

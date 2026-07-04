@@ -14,6 +14,7 @@ export const useWebRTC = () => {
   const streamRef = useRef(null);
   const [remoteStreams, setRemoteStreams] = useState({});
   const peersRef = useRef({}); // Store RTCPeerConnections mapped by userId
+  const pendingCandidates = useRef({}); // Buffer ICE candidates that arrive early
   const mediaPromiseRef = useRef(null);
 
   useEffect(() => {
@@ -97,6 +98,15 @@ export const useWebRTC = () => {
       peersRef.current[senderId] = peer;
 
       await peer.setRemoteDescription(new RTCSessionDescription(sdp));
+      
+      // Flush buffered ICE candidates
+      if (pendingCandidates.current[senderId]) {
+        for (const candidate of pendingCandidates.current[senderId]) {
+          await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+        }
+        delete pendingCandidates.current[senderId];
+      }
+
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
 
@@ -114,6 +124,14 @@ export const useWebRTC = () => {
       const peer = peersRef.current[senderId];
       if (peer) {
         await peer.setRemoteDescription(new RTCSessionDescription(sdp));
+        
+        // Flush buffered ICE candidates
+        if (pendingCandidates.current[senderId]) {
+          for (const candidate of pendingCandidates.current[senderId]) {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+          }
+          delete pendingCandidates.current[senderId];
+        }
       }
     };
     socket.on('answer', handleAnswer);
@@ -122,8 +140,13 @@ export const useWebRTC = () => {
     const handleIceCandidate = async (data) => {
       const { candidate, senderId } = data;
       const peer = peersRef.current[senderId];
-      if (peer) {
-        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      if (peer && peer.remoteDescription) {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+      } else {
+        if (!pendingCandidates.current[senderId]) {
+          pendingCandidates.current[senderId] = [];
+        }
+        pendingCandidates.current[senderId].push(candidate);
       }
     };
     socket.on('ice_candidate', handleIceCandidate);
@@ -133,6 +156,9 @@ export const useWebRTC = () => {
       if (peersRef.current[userId]) {
         peersRef.current[userId].close();
         delete peersRef.current[userId];
+      }
+      if (pendingCandidates.current[userId]) {
+        delete pendingCandidates.current[userId];
       }
       setRemoteStreams((prev) => {
         const updated = { ...prev };
