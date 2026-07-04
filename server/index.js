@@ -131,6 +131,10 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('webrtc_ready', ({ roomId }) => {
+    socket.to(roomId).emit('user_webrtc_ready', { userId: socket.id });
+  });
+
   // Chat
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', {

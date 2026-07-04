@@ -59,8 +59,8 @@ export const useWebRTC = () => {
       return peer;
     };
 
-    // When a new user joins, we (the existing user) create an offer and send it to them.
-    const handleUserJoined = async (data) => {
+    // When a new user signals they are fully mounted and ready to receive offers
+    const handleUserWebrtcReady = async (data) => {
       const { userId } = data;
       const stream = localStream || await initLocalMedia();
       
@@ -76,7 +76,7 @@ export const useWebRTC = () => {
         targetId: userId,
       });
     };
-    socket.on('user_joined', handleUserJoined);
+    socket.on('user_webrtc_ready', handleUserWebrtcReady);
 
     // Handle incoming offer
     const handleOffer = async (data) => {
@@ -134,13 +134,20 @@ export const useWebRTC = () => {
 
     // Cleanup
     return () => {
-      socket.off('user_joined', handleUserJoined);
+      socket.off('user_webrtc_ready', handleUserWebrtcReady);
       socket.off('offer', handleOffer);
       socket.off('answer', handleAnswer);
       socket.off('ice_candidate', handleIceCandidate);
       socket.off('user_left', handleUserLeft);
     };
   }, [socket, roomId, localStream]);
+
+  // Signal to existing users that we are ready to receive offers
+  useEffect(() => {
+    if (socket && roomId) {
+      socket.emit('webrtc_ready', { roomId });
+    }
+  }, [socket, roomId]);
 
   // Expose methods to start media manually if not auto-started
   const startLocalMedia = async () => {
