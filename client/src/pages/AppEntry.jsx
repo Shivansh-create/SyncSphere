@@ -1,18 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { useRoomStore } from '../store/useRoomStore';
-import { MonitorPlay, LogIn, Plus } from 'lucide-react';
+import { MonitorPlay, LogIn, Plus, Clock } from 'lucide-react';
 import Room from './Room';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import '../App.css';
 
 function AppEntry() {
-  const { initSocket, isJoined, joinRoom, userName, setUserName } = useRoomStore();
+  const { initSocket, isJoined, isWaiting, joinRoom, leaveRoom, userName, setUserName } = useRoomStore();
   const [roomIdInput, setRoomIdInput] = useState('');
+  const [hasAttemptedRejoin, setHasAttemptedRejoin] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     initSocket();
-  }, [initSocket]);
+    
+    const params = new URLSearchParams(window.location.search);
+    const inviteRoomId = params.get('room');
+    if (inviteRoomId && !roomIdInput) {
+      setRoomIdInput(inviteRoomId);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    const savedRoomId = sessionStorage.getItem('roomId');
+    if (savedRoomId && !hasAttemptedRejoin) {
+      joinRoom(savedRoomId);
+      setHasAttemptedRejoin(true);
+    }
+  }, [initSocket, joinRoom, hasAttemptedRejoin, roomIdInput]);
 
   const handleJoin = (e) => {
     e.preventDefault();
@@ -26,6 +40,26 @@ function AppEntry() {
     const newRoomId = Math.random().toString(36).substring(2, 9);
     joinRoom(newRoomId);
   };
+
+  if (isWaiting) {
+    return (
+      <div className="ambient-bg" style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at center, transparent 0%, rgba(5,5,5,0.85) 100%)', zIndex: 0 }} />
+        <div className="fade-in glass-panel" style={{ padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', zIndex: 10, maxWidth: '340px' }}>
+          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '50%', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+             <Clock size={40} color="#ef4444" />
+          </div>
+          <h2 style={{ fontSize: '24px', margin: 0, textAlign: 'center' }}>Waiting for Host...</h2>
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: 0, lineHeight: '1.5' }}>
+            You have been placed in the waiting room. The host must approve your entry before you can join.
+          </p>
+          <button className="btn-secondary" onClick={() => { leaveRoom(); window.location.href='/'; }} style={{ marginTop: '10px' }}>
+            Cancel Request
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isJoined) {
     return <Room />;

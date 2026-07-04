@@ -6,10 +6,10 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import VideoFeed from '../components/VideoFeed';
 import SyncPlayer from '../components/SyncPlayer';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Mic, MicOff, Video, VideoOff, MonitorUp, Send, MessageSquare, Circle, X, Users, Pin, Maximize, Minimize } from 'lucide-react';
+import { LogOut, Mic, MicOff, Video, VideoOff, MonitorUp, Send, MessageSquare, Circle, X, Users, Pin, Maximize, Minimize, Shield, UserMinus, Copy, CheckCircle2 } from 'lucide-react';
 
 const Room = () => {
-  const { roomId, userName, userId, leaveRoom, participants, messages, sendMessage, activeChatTarget, setActiveChatTarget } = useRoomStore();
+  const { roomId, userName, userId, leaveRoom, participants, messages, sendMessage, activeChatTarget, setActiveChatTarget, isHost, joinRequests, kickUser, approveJoin, denyJoin } = useRoomStore();
   const { localStream, remoteStreams, startLocalMedia, toggleAudio, toggleVideo, startScreenShare } = useWebRTC();
   const { isRecording, toggleRecording } = useRecorder();
   
@@ -18,6 +18,7 @@ const Room = () => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [chatInput, setChatInput] = useState('');
+  const [copied, setCopied] = useState(false);
   const [showPanel, setShowPanel] = useState(!isMobile); // Hidden by default on mobile
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'participants'
   const [showUI, setShowUI] = useState(true);
@@ -35,6 +36,14 @@ const Room = () => {
     navigate('/', { state: { message: 'You have successfully left the theater.' } });
   };
   
+  const handleCopyLink = () => {
+    const inviteLink = `${window.location.origin}/?room=${roomId}`;
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -133,6 +142,24 @@ const Room = () => {
       }}
     >
       
+      {/* Host Approval Modals */}
+      {isHost && joinRequests && joinRequests.length > 0 && (
+        <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {joinRequests.map((req, idx) => (
+            <div key={idx} className="glass-panel fade-in" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid var(--accent-base)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+              <div>
+                <span style={{ fontWeight: '600', color: '#fff' }}>{req.userName}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', marginLeft: '6px' }}>wants to re-join.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-secondary" onClick={() => denyJoin(req.targetSocketId, req.targetToken)} style={{ padding: '6px 12px', fontSize: '12px', height: 'auto', backgroundColor: 'rgba(239, 68, 68, 0.2)' }}>Deny</button>
+                <button className="btn-primary" onClick={() => approveJoin(req.targetSocketId, req.targetToken)} style={{ padding: '6px 12px', fontSize: '12px', height: 'auto' }}>Approve</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Absolute Background Video Player */}
       <SyncPlayer />
 
@@ -172,7 +199,16 @@ const Room = () => {
         padding: isMobile ? '6px 12px' : '8px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px',
         opacity: showUI ? 1 : 0, transition: 'opacity 0.5s ease', pointerEvents: showUI ? 'auto' : 'none'
       }}>
-        <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: '600', letterSpacing: '1px' }}>ROOM {roomId}</span>
+        <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: '600', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          ROOM {roomId}
+          <button 
+            onClick={handleCopyLink} 
+            title="Copy Invite Link" 
+            style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {copied ? <CheckCircle2 size={14} color="#22c55e" /> : <Copy size={14} color="var(--text-secondary)" />}
+          </button>
+        </span>
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />
         <span style={{ fontSize: isMobile ? '11px' : '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>
           {participants.length + 1} User{participants.length + 1 !== 1 ? 's' : ''}
@@ -362,7 +398,10 @@ const Room = () => {
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Users size={16} />
                   </div>
-                  <span style={{ fontSize: '14px', fontWeight: '500' }}>{userName} <span style={{ color: 'var(--text-secondary)' }}>(You)</span></span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {userName} <span style={{ color: 'var(--text-secondary)' }}>(You)</span>
+                    {isHost && <Shield size={14} color="var(--accent-base)" title="Host" />}
+                  </span>
                 </div>
                 <button 
                   onClick={() => setPinnedUserId('local')}
@@ -385,6 +424,15 @@ const Room = () => {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                    {isHost && (
+                      <button 
+                        onClick={() => kickUser(p.token)}
+                        style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
+                        title="Kick User"
+                      >
+                        <UserMinus size={16} color="#ef4444" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => setPinnedUserId(p.id)}
                       style={{ padding: '8px', borderRadius: '8px', backgroundColor: pinnedUserId === p.id ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}
