@@ -6,7 +6,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import VideoFeed from '../components/VideoFeed';
 import SyncPlayer from '../components/SyncPlayer';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Mic, MicOff, Video, VideoOff, MonitorUp, Send, MessageSquare, Circle, X, Users, Pin, Maximize, Minimize, Shield, UserMinus, Copy, CheckCircle2 } from 'lucide-react';
+import { LogOut, Mic, MicOff, Video, VideoOff, MonitorUp, Send, MessageSquare, Circle, X, Users, Pin, Maximize, Minimize, Shield, UserMinus, Copy, CheckCircle2, Link, Hash } from 'lucide-react';
 
 const Room = () => {
   const { roomId, userName, userId, leaveRoom, participants, messages, sendMessage, activeChatTarget, setActiveChatTarget, isHost, joinRequests, kickUser, approveJoin, denyJoin } = useRoomStore();
@@ -18,7 +18,8 @@ const Room = () => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [chatInput, setChatInput] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [showPanel, setShowPanel] = useState(!isMobile); // Hidden by default on mobile
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'participants'
   const [showUI, setShowUI] = useState(true);
@@ -39,8 +40,15 @@ const Room = () => {
   const handleCopyLink = () => {
     const inviteLink = `${window.location.origin}/?room=${roomId}`;
     navigator.clipboard.writeText(inviteLink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(roomId).then(() => {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
     });
   };
 
@@ -199,15 +207,24 @@ const Room = () => {
         padding: isMobile ? '6px 12px' : '8px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px',
         opacity: showUI ? 1 : 0, transition: 'opacity 0.5s ease', pointerEvents: showUI ? 'auto' : 'none'
       }}>
-        <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: '600', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: '600', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           ROOM {roomId}
-          <button 
-            onClick={handleCopyLink} 
-            title="Copy Invite Link" 
-            style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {copied ? <CheckCircle2 size={14} color="#22c55e" /> : <Copy size={14} color="var(--text-secondary)" />}
-          </button>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button 
+              onClick={handleCopyCode} 
+              title="Copy Room Code" 
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+            >
+              {copiedCode ? <CheckCircle2 size={14} color="#22c55e" /> : <Hash size={14} color="var(--text-secondary)" />}
+            </button>
+            <button 
+              onClick={handleCopyLink} 
+              title="Copy Invite Link" 
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+            >
+              {copiedLink ? <CheckCircle2 size={14} color="#22c55e" /> : <Link size={14} color="var(--text-secondary)" />}
+            </button>
+          </div>
         </span>
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />
         <span style={{ fontSize: isMobile ? '11px' : '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>
