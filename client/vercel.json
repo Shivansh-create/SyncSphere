@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/socket.io/(.*)",
-      "destination": "https://YOUR_BACKEND_URL.onrender.com/socket.io/$1"
+      "destination": "https://syncsphere-7e8p.onrender.com/socket.io/$1"
     },
     {
       "source": "/(.*)",
