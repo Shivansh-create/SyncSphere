@@ -11,22 +11,32 @@ const STUN_SERVERS = {
 export const useWebRTC = () => {
   const { socket, roomId } = useRoomStore();
   const [localStream, setLocalStream] = useState(null);
+  const streamRef = useRef(null);
   const [remoteStreams, setRemoteStreams] = useState({});
   const peersRef = useRef({}); // Store RTCPeerConnections mapped by userId
+  const mediaPromiseRef = useRef(null);
 
   useEffect(() => {
     if (!socket || !roomId) return;
 
-    // 1. Get Local Media Stream
+    // 1. Get Local Media Stream safely (prevent concurrent calls)
     const initLocalMedia = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setLocalStream(stream);
-        return stream;
-      } catch (err) {
-        console.error('Failed to get local media', err);
-        return null;
-      }
+      if (streamRef.current) return streamRef.current;
+      if (mediaPromiseRef.current) return await mediaPromiseRef.current;
+
+      mediaPromiseRef.current = new Promise(async (resolve) => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          streamRef.current = stream;
+          setLocalStream(stream);
+          resolve(stream);
+        } catch (err) {
+          console.error('Failed to get local media', err);
+          resolve(null);
+        }
+      });
+
+      return await mediaPromiseRef.current;
     };
 
     const createPeer = (userId, stream) => {
@@ -62,7 +72,7 @@ export const useWebRTC = () => {
     // When a new user signals they are fully mounted and ready to receive offers
     const handleUserWebrtcReady = async (data) => {
       const { userId } = data;
-      const stream = localStream || await initLocalMedia();
+      const stream = streamRef.current || await initLocalMedia();
       
       const peer = createPeer(userId, stream);
       peersRef.current[userId] = peer;
@@ -81,7 +91,7 @@ export const useWebRTC = () => {
     // Handle incoming offer
     const handleOffer = async (data) => {
       const { sdp, senderId } = data;
-      const stream = localStream || await initLocalMedia();
+      const stream = streamRef.current || await initLocalMedia();
 
       const peer = createPeer(senderId, stream);
       peersRef.current[senderId] = peer;
@@ -151,12 +161,22 @@ export const useWebRTC = () => {
 
   // Expose methods to start media manually if not auto-started
   const startLocalMedia = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
-    } catch (err) {
-      console.error('Error starting media', err);
-    }
+    if (streamRef.current) return;
+    if (mediaPromiseRef.current) return await mediaPromiseRef.current;
+
+    mediaPromiseRef.current = new Promise(async (resolve) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
+        setLocalStream(stream);
+        resolve(stream);
+      } catch (err) {
+        console.error('Error starting media', err);
+        resolve(null);
+      }
+    });
+    
+    return await mediaPromiseRef.current;
   };
 
   const toggleAudio = () => {
