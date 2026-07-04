@@ -23,45 +23,90 @@ app.get('/health', (req, res) => {
 });
 
 // Centralized room state
-const rooms = {}; // roomId -> Array of { id, name }
+// rooms[roomId] = { hostToken: string, participants: [{ id, name, token }], kickedTokens: Set }
+const rooms = {};
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   // Room Management
   socket.on('join_room', (data) => {
-    const { roomId, userName } = data;
+    const { roomId, userName, clientToken } = data;
+    
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        hostToken: clientToken,
+        participants: [],
+        kickedTokens: new Set()
+      };
+    }
+
+    const room = rooms[roomId];
+
+    if (room.kickedTokens.has(clientToken)) {
+      socket.emit('in_waiting_room');
+      const hostSocket = room.participants.find(p => p.token === room.hostToken)?.id;
+      if (hostSocket) {
+        io.to(hostSocket).emit('join_request', { targetSocketId: socket.id, targetToken: clientToken, userName });
+      }
+      return;
+    }
+
     socket.join(roomId);
     socket.roomId = roomId;
     socket.userName = userName;
+    socket.clientToken = clientToken;
     
-    if (!rooms[roomId]) {
-      rooms[roomId] = [];
-    }
-    
-    // Check if user is already in the array (prevent duplicates on reconnect)
-    const existingIndex = rooms[roomId].findIndex(p => p.id === socket.id);
+    const existingIndex = room.participants.findIndex(p => p.token === clientToken);
     if (existingIndex === -1) {
-      rooms[roomId].push({ id: socket.id, name: userName });
+      room.participants.push({ id: socket.id, name: userName, token: clientToken });
     } else {
-      rooms[roomId][existingIndex].name = userName;
+      room.participants[existingIndex].id = socket.id;
+      room.participants[existingIndex].name = userName;
     }
 
     console.log(`User ${userName} (${socket.id}) joined room ${roomId}`);
     
-    // Send the current list of participants to the user who just joined
-    socket.emit('room_participants', rooms[roomId]);
+    socket.emit('room_participants', {
+      participants: room.participants,
+      hostToken: room.hostToken
+    });
     
-    // Broadcast to others in the room that a user joined
-    socket.to(roomId).emit('user_joined', { userId: socket.id, userName });
+    socket.to(roomId).emit('user_joined', { userId: socket.id, userName, token: clientToken });
   });
 
   socket.on('leave_room', (roomId) => {
     socket.leave(roomId);
     if (rooms[roomId]) {
-      rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
+      rooms[roomId].participants = rooms[roomId].participants.filter(p => p.id !== socket.id);
     }
     socket.to(roomId).emit('user_left', socket.id);
+  });
+
+  socket.on('kick_user', ({ roomId, targetToken }) => {
+    if (rooms[roomId] && rooms[roomId].hostToken === socket.clientToken) {
+      rooms[roomId].kickedTokens.add(targetToken);
+      const targetParticipant = rooms[roomId].participants.find(p => p.token === targetToken);
+      if (targetParticipant) {
+        rooms[roomId].participants = rooms[roomId].participants.filter(p => p.token !== targetToken);
+        io.to(targetParticipant.id).emit('you_were_kicked');
+        io.in(targetParticipant.id).socketsLeave(roomId);
+        socket.to(roomId).emit('user_left', targetParticipant.id);
+      }
+    }
+  });
+
+  socket.on('approve_join', ({ roomId, targetSocketId, targetToken }) => {
+    if (rooms[roomId] && rooms[roomId].hostToken === socket.clientToken) {
+      rooms[roomId].kickedTokens.delete(targetToken);
+      io.to(targetSocketId).emit('join_approved');
+    }
+  });
+
+  socket.on('deny_join', ({ roomId, targetSocketId }) => {
+    if (rooms[roomId] && rooms[roomId].hostToken === socket.clientToken) {
+      io.to(targetSocketId).emit('join_denied');
+    }
   });
 
   // WebRTC Signaling
@@ -119,11 +164,10 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
     if (socket.roomId && rooms[socket.roomId]) {
-      rooms[socket.roomId] = rooms[socket.roomId].filter(p => p.id !== socket.id);
+      rooms[socket.roomId].participants = rooms[socket.roomId].participants.filter(p => p.id !== socket.id);
       socket.to(socket.roomId).emit('user_left', socket.id);
       
-      // Clean up empty rooms
-      if (rooms[socket.roomId].length === 0) {
+      if (rooms[socket.roomId].participants.length === 0) {
         delete rooms[socket.roomId];
       }
     }
