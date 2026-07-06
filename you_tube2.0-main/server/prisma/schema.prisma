@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SubscriptionPlan {
+  id                   String   @id @default(uuid())
+  name                 String   @unique
+  dailyDownloadLimit   Int
+  monthlyDownloadLimit Int?
+  isUnlimited          Boolean  @default(false)
+  price                Float?
+  features             String?  // JSON string or comma-separated list of features
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  users                User[]
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  sourceUrl   String
+  duration    Int?     // in seconds
+  fileSize    Int?     // in bytes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  downloads   DownloadHistory[]
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  passwordHash       String
+  subscriptionPlanId String
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  downloadsToday     Int      @default(0)
+  lastDownloadDate   DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  theme              String   @default("auto")
+  trustedDevices     String?  // JSON string
+  otpCode            String?
+  otpExpiresAt       DateTime?
+  downloads          DownloadHistory[]
+}
+
+model DownloadHistory {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  videoId       String
+  video         Video    @relation(fields: [videoId], references: [id])
+  videoUrl      String   // Snapshot of the URL downloaded
+  title         String   // Snapshot of the title
+  thumbnail     String?  // Snapshot of thumbnail
+  description   String?
+  duration      Int?
+  fileSize      Int?
+  downloadCount Int      @default(1)
+  planAtTime    String   // Snapshot of plan name at time of download
+  status        String   @default("COMPLETED")
+  downloadedAt  DateTime @default(now())
+  downloadDate  DateTime @default(now()) @db.Date
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

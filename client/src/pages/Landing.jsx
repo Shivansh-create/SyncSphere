@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MonitorPlay, Radio, MessageSquare, Zap, CheckCircle2 } from 'lucide-react';
+import { MonitorPlay, Radio, MessageSquare, Zap, CheckCircle2, Home } from 'lucide-react';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const Landing = () => {
@@ -19,16 +19,18 @@ const Landing = () => {
   }, [toast]);
 
   return (
-    <div className="ambient-bg" style={{ minHeight: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden' }}>
+    <div className="ambient-bg" style={{ minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden' }}>
       
       {/* Cinematic Vignette */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at center, transparent 0%, rgba(5,5,5,0.85) 100%)', zIndex: 0 }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at center, transparent 0%, var(--bg-base) 100%)', zIndex: 0 }} />
 
       {/* Navbar */}
-      <div style={{ position: 'relative', zIndex: 10, padding: '24px 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <MonitorPlay size={28} color="var(--accent-base)" />
-          <span style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '2px', background: 'linear-gradient(to right, #fff, #a5b4fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+      <div style={{ position: 'relative', zIndex: 10, padding: isMobile ? '80px 20px 16px' : '100px 48px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
+          <button className="btn-icon" onClick={() => navigate('/')} title="Back to Hub" style={{ width: isMobile ? '36px' : '44px', height: isMobile ? '36px' : '44px' }}>
+            <Home size={18} />
+          </button>
+          <span style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '800', letterSpacing: '2px', background: 'linear-gradient(to right, var(--text-primary), var(--accent-base))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             SYNCOSPHERE
           </span>
         </div>
@@ -105,12 +107,12 @@ const Landing = () => {
           position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', 
           background: 'linear-gradient(135deg, var(--accent-base), var(--accent-hover))', 
           backdropFilter: 'blur(10px)',
-          color: '#fff', padding: '14px 24px', borderRadius: '100px', zIndex: 100, 
+          color: '#fff', padding: '14px 24px', borderRadius: '100px', zIndex: 100,
           boxShadow: '0 10px 30px var(--accent-glow)', fontWeight: '600',
           display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px',
           animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
-          <CheckCircle2 size={18} color="#fff" />
+          <CheckCircle2 size={18} color="#ffffff" />
           {toast}
         </div>
       )}

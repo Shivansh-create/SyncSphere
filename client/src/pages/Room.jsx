@@ -3,6 +3,7 @@ import { useRoomStore } from '../store/useRoomStore';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useRecorder } from '../hooks/useRecorder';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useAuthStore } from '../store/useAuthStore';
 import VideoFeed from '../components/VideoFeed';
 import SyncPlayer from '../components/SyncPlayer';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +11,7 @@ import { LogOut, Mic, MicOff, Video, VideoOff, MonitorUp, Send, MessageSquare, C
 
 const Room = () => {
   const { roomId, userName, userId, leaveRoom, participants, messages, sendMessage, activeChatTarget, setActiveChatTarget, isHost, joinRequests, kickUser, approveJoin, denyJoin } = useRoomStore();
+  const { user } = useAuthStore();
   const { localStream, remoteStreams, startLocalMedia, toggleAudio, toggleVideo, startScreenShare } = useWebRTC();
   const { isRecording, toggleRecording } = useRecorder();
   
@@ -34,11 +36,11 @@ const Room = () => {
       document.exitFullscreen().catch(err => console.error(err));
     }
     leaveRoom();
-    navigate('/', { state: { message: 'You have successfully left the theater.' } });
+    navigate('/syncsphere', { state: { message: 'You have successfully left the theater.' } });
   };
   
   const handleCopyLink = () => {
-    const inviteLink = `${window.location.origin}/?room=${roomId}`;
+    const inviteLink = `${window.location.origin}/app?room=${roomId}`;
     navigator.clipboard.writeText(inviteLink).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
@@ -170,6 +172,15 @@ const Room = () => {
 
       {/* Absolute Background Video Player */}
       <SyncPlayer />
+
+      {/* Ad Banner for FREE tier */}
+      {(!user || user.plan === 'FREE') && showUI && (
+        <div style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, backgroundColor: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(10px)', padding: '12px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 10px 30px rgba(239, 68, 68, 0.3)', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <div style={{ backgroundColor: '#fff', color: '#ef4444', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '4px' }}>AD</div>
+          <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>You are on the FREE plan. Upgrade to Bronze or higher to remove ads and unlock 4K.</span>
+          <button onClick={() => window.open('/pricing', '_blank')} style={{ padding: '6px 12px', backgroundColor: '#fff', color: '#ef4444', border: 'none', borderRadius: '6px', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}>Upgrade Now</button>
+        </div>
+      )}
 
       {/* Pinned Video Stage */}
       {pinnedUserId && (

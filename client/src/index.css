@@ -7,10 +7,42 @@
   --accent-glow: rgba(99, 102, 241, 0.5);
   --text-primary: #ffffff;
   --text-secondary: #94a3b8;
-  --glass-bg: rgba(15, 15, 20, 0.45);
+  --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-border-sheen: rgba(255, 255, 255, 0.15);
+  --glass-border-top: rgba(255, 255, 255, 0.15);
+  --glass-shadow: rgba(0, 0, 0, 0.4);
+  --glass-shadow-inset: rgba(255, 255, 255, 0.1);
+  --glass-hover: rgba(255, 255, 255, 0.05);
+  --glass-border-hover: rgba(255, 255, 255, 0.2);
   --danger-base: #ef4444;
+  --ambient-color-1: #1e1b4b;
+  --ambient-color-2: #312e81;
+  --ambient-color-3: #000000;
+  --ambient-color-4: #09090b;
+}
+
+body.light-theme {
+  --bg-base: #ffffff;
+  --accent-base: #3b82f6; 
+  --accent-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.15);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  
+  /* Pristine, vibrant glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(59, 130, 246, 0.15);
+  --glass-border-top: rgba(255, 255, 255, 1);
+  --glass-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+  --glass-shadow-inset: rgba(255, 255, 255, 1);
+  --glass-hover: rgba(255, 255, 255, 0.95);
+  --glass-border-hover: rgba(59, 130, 246, 0.3);
+  
+  /* Sky Blue & Cream Mesh */
+  --ambient-color-1: #e0f2fe; /* light sky blue */
+  --ambient-color-2: #f3e8ff; /* soft lavender */
+  --ambient-color-3: #ffffff; /* pure white */
+  --ambient-color-4: #f8fafc; /* cream */
 }
 
 * {
@@ -34,9 +66,9 @@ html, body, #root {
 
 /* Ambient Mesh Background */
 .ambient-bg {
-  background: radial-gradient(circle at 0% 0%, #1e1b4b 0%, transparent 50%),
-              radial-gradient(circle at 100% 100%, #312e81 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, #000000 0%, #09090b 100%);
+  background: radial-gradient(circle at 0% 0%, var(--ambient-color-1) 0%, transparent 50%),
+              radial-gradient(circle at 100% 100%, var(--ambient-color-2) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, var(--ambient-color-3) 0%, var(--ambient-color-4) 100%);
   background-size: 200% 200%;
   animation: ambientShift 15s ease infinite alternate;
 }
@@ -48,13 +80,13 @@ html, body, #root {
 
 /* VisionOS Inspired Glassmorphism */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border);
+  border-top: 1px solid var(--glass-border-top);
   border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px var(--glass-shadow), inset 0 1px 0 var(--glass-shadow-inset);
 }
 
 /* Base Button Styles */
@@ -216,6 +248,27 @@ button {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes ripplePop {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+.ripple-effect {
+  animation: ripplePop 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* YouTube Container */
