@@ -9,12 +9,71 @@ const Videogrid = () => {
     const fetchvideo = async () => {
       try {
         const res = await axiosInstance.get("/video/getall");
-        setvideo(res.data);
+        if (res.data && res.data.length > 0) {
+          setvideo(res.data);
+          return;
+        }
       } catch (error) {
-        console.log(error);
+        console.log("API failed, using fallback data", error);
       } finally {
         setloading(false);
       }
+      
+      // Fallback if backend is not available (e.g. on Vercel without a deployed backend)
+      setvideo([
+        {
+          _id: "static-0",
+          videotitle: "Amazing Nature Documentary",
+          filename: "nature-doc.mp4",
+          filetype: "video/mp4",
+          filepath: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          filesize: "500MB",
+          videochanel: "Nature Channel",
+          Like: 1250,
+          views: 45000,
+          uploader: "nature_lover",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          _id: "static-1",
+          videotitle: "Cooking Tutorial: Perfect Pasta",
+          filename: "pasta-tutorial.mp4",
+          filetype: "video/mp4",
+          filepath: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          filesize: "300MB",
+          videochanel: "Chef's Kitchen",
+          Like: 890,
+          views: 23000,
+          uploader: "chef_master",
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+        },
+        {
+          _id: "static-2",
+          videotitle: "Tech Review: Latest Smartphone",
+          filename: "tech-review.mp4",
+          filetype: "video/mp4",
+          filepath: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          filesize: "400MB",
+          videochanel: "Tech Guru",
+          Like: 3200,
+          views: 120000,
+          uploader: "tech_guru",
+          createdAt: new Date(Date.now() - 172800000).toISOString(),
+        },
+        {
+          _id: "static-3",
+          videotitle: "Travel Vlog: Exploring Japan",
+          filename: "japan-vlog.mp4",
+          filetype: "video/mp4",
+          filepath: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          filesize: "800MB",
+          videochanel: "Wanderlust",
+          Like: 5400,
+          views: 210000,
+          uploader: "wanderlust",
+          createdAt: new Date(Date.now() - 259200000).toISOString(),
+        }
+      ]);
     };
     fetchvideo();
   }, []);
